@@ -31,3 +31,7 @@
 
 # "temporary" build files
 /target
+
+/grails-app/conf/passwords.properties
+/.idea
+
