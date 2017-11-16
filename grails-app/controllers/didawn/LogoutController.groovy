@@ -1,4 +1,4 @@
-package starter
+package didawn
 
 import grails.plugin.springsecurity.SpringSecurityUtils
 import org.springframework.security.access.annotation.Secured

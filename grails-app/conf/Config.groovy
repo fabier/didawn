@@ -128,7 +128,7 @@ role.user = 'ROLE_USER'
 // Configuration pour le serveur de mail
 grails {
     mail {
-        host = "smtp.XXXXXXXXXXX.com"
+        host = "smtp.1und1.de"
         port = 587
         props = ["mail.smtp.auth"                  : "true",
                  "mail.smtp.socketFactory.port"    : "587",
@@ -160,8 +160,8 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
 ]
 
 grails.plugin.springsecurity.ui.register.postRegisterUrl = '/'
-grails.plugin.springsecurity.ui.register.emailFrom = 'XXXXXXXXXXX@XXXXXXXXXXX.com'
-grails.plugin.springsecurity.ui.register.emailSubject = 'XXXXXXXXXXX - Valider votre email'
+grails.plugin.springsecurity.ui.register.emailFrom = 'admin@didawn.com'
+grails.plugin.springsecurity.ui.register.emailSubject = 'Didawn - Valider votre email'
 grails.plugin.springsecurity.ui.register.defaultRoleNames = ['ROLE_USER']
 grails.plugin.springsecurity.ui.password.validationRegex = '^.*(?=.*[a-zA-Z\\d]).*$' // At least a few characters
 grails.plugin.springsecurity.ui.password.minLength = 4
@@ -182,31 +182,31 @@ grails {
                     emailBody = '''\
 Bonjour $user.username,<br/>
 <br/>
-Vous venez de créer un compte sur <a href="http://www.XXXXXXXXXXX.com">XXXXXXXXXXX</a> et nous vous en remercions !<br/>
+Vous venez de créer un compte sur <a href="http://www.didawn.com">Didawn</a> et nous vous en remercions !<br/>
 <br/>
 Merci de <strong><a href="$url">cliquer ici</a></strong> pour terminer la procédure d'enregistrement, ou copier coller l'adresse suivante dans votre navigateur :<br/>
 $url<br/>
 <br/>
 Merci de ne pas répondre à ce message automatique.<br/>
 <br/>
-L'équipe XXXXXXXXXXX
+L'équipe Didawn
 '''
-                    emailFrom = 'XXXXXXXXXXX <XXXXXXXXXXX@XXXXXXXXXXX.com>'
-                    emailSubject = 'XXXXXXXXXXX - Création de compte'
+                    emailFrom = 'Didawn <admin@didawn.com>'
+                    emailSubject = 'Didawn - Création de compte'
                     defaultRoleNames = ['ROLE_USER']
                     postRegisterUrl = null // use defaultTargetUrl if not set
-                    emailTo = 'contact@XXXXXXXXXXX.com'
+                    emailTo = 'contact@didawn.com'
                     emailBodyToInternalEmailAccount = '''\
 Bonjour,<br/>
 <br/>
-Un nouvel utilisateur vient d'être créé sur <a href="http://www.XXXXXXXXXXX.com">XXXXXXXXXXX</a>.<br/>
+Un nouvel utilisateur vient d'être créé sur <a href="http://www.didawn.com">didawn</a>.<br/>
 <br/>
   Nom : <b>$user.username</b><br/>
 Email : <b>$user.email</b><br/>
 <br/>
 Merci de ne pas répondre à ce message automatique.<br/>
 <br/>
-L'équipe XXXXXXXXXXX
+L'équipe Didawn
 '''
                 }
 
@@ -214,7 +214,7 @@ L'équipe XXXXXXXXXXX
                     emailBody = '''\
 Hi $user.username,<br/>
 <br/>
-Vous, ou quelqu'un se faisant passer pour vous, venez de faire une demande de mise à zéro de votre mot de passe sur <a href="http://www.XXXXXXXXXXX.com">XXXXXXXXXXX</a>.<br/>
+Vous, ou quelqu'un se faisant passer pour vous, venez de faire une demande de mise à zéro de votre mot de passe sur <a href="http://www.didawn.com">didawn</a>.<br/>
 <br/>
 Si vous n'avez pas fait cette demande, alors ignorez ce message et supprimez le, aucun changement de sera appliqué à votre compte.<br/>
 <br/>
@@ -222,10 +222,10 @@ Si vous êtes bien celui qui a fait la demande, alors <a href="$url">cliquez ici
 <br/>
 Merci de ne pas répondre à ce message automatique.<br/>
 <br/>
-L'équipe XXXXXXXXXXX
+L'équipe Didawn
 '''
-                    emailFrom = 'XXXXXXXXXXX <XXXXXXXXXXX@XXXXXXXXXXX.com>'
-                    emailSubject = 'XXXXXXXXXXX - Réinitialisation du mot de passe'
+                    emailFrom = 'Didawn <admin@didawn.com>'
+                    emailSubject = 'Didawn - Réinitialisation du mot de passe'
                     postResetUrl = null // use defaultTargetUrl if not set
                 }
             }

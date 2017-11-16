@@ -1,7 +1,9 @@
-package starter
+package didawn
 
 import grails.plugin.springsecurity.SpringSecurityUtils
 import org.springframework.security.access.annotation.Secured
+import starter.User
+import starter.UserRole
 
 @Secured("hasRole('ROLE_ADMIN')")
 class UserController extends grails.plugin.springsecurity.ui.UserController {
