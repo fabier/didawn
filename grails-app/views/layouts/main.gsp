@@ -6,6 +6,9 @@
     <title><g:layoutTitle default="Didawn"/></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <asset:stylesheet src="application"/>
+    <asset:javascript src="application"/>
+
     <link rel="apple-touch-icon" sizes="57x57" href="${assetPath(src: 'favicons/apple-icon-57x57.png')}">
     <link rel="apple-touch-icon" sizes="60x60" href="${assetPath(src: 'favicons/apple-icon-60x60.png')}">
     <link rel="apple-touch-icon" sizes="72x72" href="${assetPath(src: 'favicons/apple-icon-72x72.png')}">
@@ -24,8 +27,6 @@
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
 
-    <asset:stylesheet src="application"/>
-    <asset:javascript src="application"/>
     <g:layoutHead/>
 </head>
 

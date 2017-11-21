@@ -45,6 +45,9 @@ grails.project.dependency.resolution = {
         //mavenRepo "http://repository.codehaus.org"
         //mavenRepo "http://download.java.net/maven/2/"
         //mavenRepo "http://repository.jboss.com/maven2/"
+
+        // For jAudioTagger
+        mavenRepo "https://dl.bintray.com/ijabz/maven"
     }
 
     dependencies {
@@ -63,12 +66,15 @@ grails.project.dependency.resolution = {
         runtime "commons-codec:commons-codec:jar:1.11"
 
         runtime "se.michaelthelin.spotify:spotify-web-api-java:1.5.0"
+
+        // jAudioTagger
+        runtime "net.jthink:jaudiotagger:2.2.3"
     }
 
     plugins {
         // plugins for the build system only
         // build ':tomcat:8.0.22'
-        build ":tomcat:7.0.55.2" // or ":tomcat:8.0.20"
+        build ':tomcat:8.0.14.1'
 
         // plugins for the compile step
         // compile ":scaffolding:2.1.2"
@@ -77,13 +83,15 @@ grails.project.dependency.resolution = {
         compile ":less-asset-pipeline:2.0.8"
 
         // plugins needed at runtime but not for compilation
-        runtime ":hibernate:3.6.10.19"
+        compile ':hibernate4:5.0.0.RC1'
         runtime ":database-migration:1.4.0"
         runtime ":jquery:1.11.1"
         runtime ":jquery-ui:1.10.4"
 
         // Bootstrap
         compile ":twitter-bootstrap:3.3.4"
+        runtime ":jquery:1.11.1"
+        compile ":jquery-ui:1.10.4"
 
         // Gestion utilisateurs
         compile ":spring-security-core:2.0-RC4"

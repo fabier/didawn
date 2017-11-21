@@ -2,9 +2,6 @@ package didawn
 
 import com.google.gson.annotations.SerializedName
 
-/**
- * Created by fabier on 16/11/17.
- */
 class SpAuthResponse {
     @SerializedName("access_token")
     private String accessToken;

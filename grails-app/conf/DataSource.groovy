@@ -9,7 +9,7 @@ dataSource {
     // You can also use :
     // dialect = org.hibernate.dialect.PostgreSQL9Dialect
     // if you prefer to have only one sequence throughout the database
-    dialect = starter.TableNameSequencePostgreSQLDialect
+    dialect = 'didawn.TableNameSequencePostgreSQLDialect'
 //    logSql = true
 }
 

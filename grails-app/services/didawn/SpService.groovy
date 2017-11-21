@@ -3,9 +3,7 @@ package didawn
 import com.google.gson.Gson
 import com.google.gson.stream.JsonReader
 import com.wrapper.spotify.Api
-import com.wrapper.spotify.models.Playlist
-import com.wrapper.spotify.models.PlaylistTrack
-import com.wrapper.spotify.models.User
+import com.wrapper.spotify.models.*
 import grails.transaction.Transactional
 import org.apache.commons.codec.binary.Base64
 import org.apache.http.HttpResponse
@@ -103,11 +101,36 @@ class SpService {
         def d = api(token).getPlaylistTracks(userId, playlistId).build()
         log.info d.toUrl().toString()
         def p = d.get()
+        tracks.addAll(p.items)
         while (p.next) {
             log.info p.next
             p = api(token).getPlaylistTracks(userId, playlistId).offset(tracks.size()).build().get()
             tracks.addAll(p.items)
         }
         tracks
+    }
+
+    Track getTrack(String token, String trackId) {
+        def d = api(token).getTrack(trackId).build()
+        log.info d.toUrl().toString()
+        d.get()
+    }
+
+    Album getAlbum(String token, String albumId) {
+        def d = api(token).getAlbum(albumId).build()
+        log.info d.toUrl().toString()
+        d.get()
+    }
+
+    Artist getArtist(String token, String artistId) {
+        def d = api(token).getArtist(artistId).build()
+        log.info d.toUrl().toString()
+        d.get()
+    }
+
+    NewReleases getNewReleases(String token) {
+        def d = api(token).getNewReleases().build()
+        log.info d.toUrl().toString()
+        d.get()
     }
 }
