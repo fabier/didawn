@@ -5,7 +5,7 @@ import grails.plugin.springsecurity.authentication.dao.NullSaltSource
 import grails.plugin.springsecurity.ui.RegistrationCode
 import org.springframework.security.access.annotation.Secured
 
-@Secured("permitAll")
+@Secured("hasRole('ROLE_ADMIN')")
 class RegisterController extends grails.plugin.springsecurity.ui.RegisterController {
 
     def index() {

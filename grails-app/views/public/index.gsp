@@ -9,17 +9,6 @@
 <div class="container">
     <div class="row">
         <div class="col-sm-6 col-sm-offset-3">
-            <g:if test="${session.accessToken}">
-                <h1>Logged in Spotify OK</h1>
-            </g:if>
-            <g:else>
-                <h1><g:link uri="${uri}">LOGIN TO SPOTIFY</g:link></h1>
-            </g:else>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-sm-6 col-sm-offset-3">
             <g:form controller="search" action="search" class="form-horizontal">
                 <div class="form-group">
                     <label for="value" class="control-label col-sm-2">Search</label>
@@ -37,13 +26,19 @@
         </div>
     </div>
 
-    <g:each in="${playlists}">
+    <g:each in="${playlists.collate(6)}" var="playlistLine">
         <div class="row">
-            <div class="col-sm-12">
-                <g:link controller="playlist" action="show" id="${it.id}" params="[userId: it.owner.id]">
-                    ${it.name}
-                </g:link>
-            </div>
+            <g:each in="${playlistLine}">
+                <div class="col-sm-2">
+                    <g:link controller="playlist" action="show" id="${it.id}" params="[userId: it.owner.id]">
+                        <img src="${it.images.first().url}" class="width-100"/>
+
+                        <p class="text-center">
+                            ${it.name}
+                        </p>
+                    </g:link>
+                </div>
+            </g:each>
         </div>
     </g:each>
 </div>

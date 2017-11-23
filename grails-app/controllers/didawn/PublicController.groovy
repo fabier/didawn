@@ -15,10 +15,22 @@ class PublicController {
         log.info spURI.toString()
 
         List<Playlist> playlists = null
-        if (session.accessToken) {
-            playlists = spService.getPlaylists(session.accessToken)
+
+        def accessToken = session.accessToken
+        if (accessToken) {
+            playlists = spService.getPlaylists(accessToken)
+            playlists.sort(true) { a, b ->
+                a.name.compareTo(b.name)
+            }
         }
 
         render view: "index", model: [uri: spURI.toString(), playlists: playlists]
+    }
+
+    def logout() {
+        session.removeAttribute("accessToken")
+        session.removeAttribute("me")
+
+        redirect action: "index"
     }
 }

@@ -3,7 +3,7 @@ package didawn
 import com.wrapper.spotify.models.Track
 import org.springframework.security.access.annotation.Secured
 
-@Secured(['permitAll'])
+@Secured("hasRole('ROLE_ADMIN')")
 class TrackController {
 
     SpService spService

@@ -18,7 +18,7 @@
         </div>
 
         <div id="navbar" class="collapse navbar-collapse">
-            %{--<ul class="nav navbar-nav">--}%
+            %{--<ul class="nav navbar-nav nopadding">--}%
             %{--<li>--}%
             %{--<a href="#">--}%
             %{--<i class="glyphicon glyphicon-dashboard"></i>--}%
@@ -40,6 +40,20 @@
             %{--</ul>--}%
 
             <ul class="nav navbar-nav navbar-right">
+                <g:if test="${session.me}">
+                    <li class="nopadding">
+                        <g:link controller="public" action="logout" class="nopadding margin-8">
+                            <img src="${session.me.images.first().url}" class="sp-image"/>
+                        </g:link>
+                    </li>
+                </g:if>
+                <g:else>
+                    <li>
+                        <g:link uri="${uri}">
+                            Login to Spotify
+                        </g:link>
+                    </li>
+                </g:else>
                 <sec:ifNotLoggedIn>
                     <li>
                         <g:link controller="login">

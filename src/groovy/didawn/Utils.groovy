@@ -1,6 +1,6 @@
 package didawn
 
-import didawn.models.Song
+import didawn.gson.Track
 import org.jaudiotagger.audio.exceptions.CannotReadException
 import org.jaudiotagger.audio.exceptions.CannotWriteException
 import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException
@@ -30,7 +30,7 @@ public class Utils {
         return s == null || s.isEmpty();
     }
 
-    public static void writeTrackInfo(Song track, File fileIn) throws IOException {
+    public static void writeTrackInfo(Track track, File fileIn) throws IOException {
         try {
             MP3File f = (MP3File) read(fileIn);
             ID3v23Tag tag = new ID3v23Tag();
@@ -39,19 +39,19 @@ public class Utils {
                 tag.addField(ARTIST, artist);
             }
 
-            tag.addField(ALBUM_ARTIST, track.getAlbumArtist());
+            tag.addField(ALBUM_ARTIST, track.getAlbum().getArtist().getName());
             tag.addField(TITLE, track.getTitle());
-            tag.addField(TRACK, valueOf(track.getTrackNumber()));
-            tag.addField(DISC_NO, valueOf(track.getDiskNumber()));
-            tag.addField(ALBUM, track.getAlbum());
-            tag.addField(YEAR, track.getYear());
-            tag.addField(GENRE, track.getGenre());
-            tag.addField(ISRC, track.getIsrc());
-            tag.addField(COMPOSER, track.getComposer());
-            tag.addField(BPM, track.getBpm());
-            tag.addField(TRACK_TOTAL, track.getAlbumTrackCount());
-            tag.addField(RECORD_LABEL, track.getLabel());
-            tag.addField(getAlbumArtwork(track.getCoverURL()));
+            tag.addField(TRACK, valueOf(track.getTRACK_NUMBER()));
+            tag.addField(DISC_NO, valueOf(track.getDISK_NUMBER()));
+            tag.addField(ALBUM, track.getAlbum().getTitle());
+            tag.addField(YEAR, track.getDIGITAL_RELEASE_DATE());
+            tag.addField(GENRE, track.getGENRE_ID());
+            tag.addField(ISRC, track.getISRC());
+            tag.addField(COMPOSER, track.getCOMPOSER());
+            tag.addField(BPM, Float.toString(track.getBPM()));
+            tag.addField(TRACK_TOTAL, Integer.toString(track.getAlbum().getNbTracks()));
+            tag.addField(RECORD_LABEL, Long.toString(track.getLABEL_ID()));
+            tag.addField(getAlbumArtwork(track.getAlbum().getCover()));
             f.setTag(tag);
             f.commit();
         } catch (CannotWriteException | InvalidAudioFrameException | ReadOnlyFileException | TagException | CannotReadException e) {

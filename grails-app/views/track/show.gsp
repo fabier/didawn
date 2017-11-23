@@ -15,7 +15,10 @@
 
     <div class="row">
         <div class="col-md-12">
-            <g:link uri="${track.previewUrl}">Listen !</g:link>
+            <audio controls>
+                <source src="${track.previewUrl}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <br/>
             ${track.id}
             <br/>

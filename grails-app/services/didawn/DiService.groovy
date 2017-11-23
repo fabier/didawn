@@ -1,10 +1,7 @@
 package didawn
 
 import com.google.gson.Gson
-import didawn.gson.TrackExtra
-import didawn.json.*
-import didawn.models.ArtistList
-import didawn.models.Song
+import didawn.gson.*
 import grails.converters.JSON
 import grails.transaction.Transactional
 import grails.util.Environment
@@ -29,7 +26,6 @@ import java.util.regex.Pattern
 
 import static java.lang.Long.parseLong
 import static java.lang.String.format
-import static java.lang.Thread.sleep
 import static java.net.URLEncoder.encode
 import static java.util.Arrays.asList
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric
@@ -62,7 +58,10 @@ class DiService {
 
     private String apiToken
 
-    def CryptoService cryptoService
+    CryptoService cryptoService
+
+    DiWsService diWsService
+
     def grailsApplication
 
     String wwwUrl() {
@@ -186,72 +185,56 @@ class DiService {
         return apiToken
     }
 
-    boolean isUserTrack(Song song) {
-        return song.getId().startsWith("-")
+    String getCoverUrl(Track track) {
+        format("http://cdn-images.%s/images/cover/%s/500x500-000000-80-0-0.jpg", dawnDotCom(), track.ALB_PICTURE)
     }
 
-    String getCoverUrl(Song song) {
-        format("http://cdn-images.%s/images/cover/%s/500x500-000000-80-0-0.jpg", dawnDotCom(), song.getAlbumPicture())
-    }
-
-    String getDownloadUrl(Song song) {
-        return cryptoService.getDownloadURL(song.getMd5(), getFormat(song), getSongID(song), song.getMediaVersion())
-    }
-
-    String getDownloadUrlEnd(Song song) {
-        return cryptoService.getDownloadUrlEnd(song.getMd5(), getFormat(song), getSongID(song), song.getMediaVersion())
-    }
-
-    String getDownloadUrlEnd(didawn.gson.Track track) {
-        track.trackExtra == null ? null : getDownloadUrlEnd(track.trackExtra)
-    }
-
-    String getDownloadUrlEnd(TrackExtra trackExtra) {
-        trackExtra == null ? null : cryptoService.getDownloadUrlEnd(trackExtra.getMD5_ORIGIN(),
-                getFormat(trackExtra),
-                trackExtra.getSNG_ID(),
-                trackExtra.getMEDIA_VERSION()
+    String getDownloadUrl(Track track) {
+        return cryptoService.getDownloadURL(
+                track.getMD5_ORIGIN(),
+                getFormat(track),
+                track.getSNG_ID(),
+                track.getMEDIA_VERSION()
         )
     }
 
-    boolean isUserTrack(TrackExtra trackExtra) {
-        trackExtra.getSNG_ID() < 0
+    String getDownloadUrlEnd(Track track) {
+        track == null ? null : cryptoService.getDownloadUrlEnd(
+                track.getMD5_ORIGIN(),
+                getFormat(track),
+                track.getSNG_ID(),
+                track.getMEDIA_VERSION()
+        )
     }
 
-    int getFormat(TrackExtra trackExtra) {
-        if (isUserTrack(trackExtra)) {
+    boolean isUserTrack(Track track) {
+        track.getSNG_ID() < 0
+    }
+
+    int getFormat(Track  track) {
+        if (isUserTrack(track)) {
             return 0;
         } else {
-            return trackExtra.getFILESIZE_MP3_320() > 0L ? 3 : trackExtra.getFILESIZE_MP3_256() > 0L ? 5 : 1;
+            return track.getFILESIZE_MP3_320() > 0L ? 3 : track.getFILESIZE_MP3_256() > 0L ? 5 : 1;
         }
     }
 
-    String getDownloadUrl(String md5, int format, String id, int mediaVersion) {
-        return cryptoService.getDownloadURL(md5, format, id, mediaVersion)
-    }
-
-    String getSongID(Song song) {
-        if (isUserTrack(song)) {
-            return song.getId().substring(1)
-        } else {
-            return song.getId()
-        }
-    }
-
-    int getFormat(Song song) {
-        if (isUserTrack(song)) {
-            return 0
-        } else {
-            return song.getFileSizeMp3_320() > 0L ? 3 : song.getFileSizeMp3_256() > 0L ? 5 : 1
-        }
-    }
-
-    boolean download(Song song, OutputStream outputStream) {
-        download(song.getMd5(), getFormat(song), getSongID(song), song.getMediaVersion(), outputStream)
+    boolean download(Track track, OutputStream outputStream) {
+        download(
+                track.getMD5_ORIGIN(),
+                getFormat(track),
+                Long.toString(track.getSNG_ID()),
+                track.getMEDIA_VERSION(),
+                outputStream
+        )
     }
 
     boolean download(String md5, int format, String id, int mediaVersion, OutputStream outputStream) {
         download(id, getDownloadUrl(md5, format, id, mediaVersion), outputStream)
+    }
+
+    String getDownloadUrl(String md5, int format, String id, int mediaVersion) {
+        return cryptoService.getDownloadURL(md5, format, id, mediaVersion)
     }
 
     boolean downloadFromData(String id, String data, OutputStream outputStream) {
@@ -317,198 +300,49 @@ class DiService {
         }
     }
 
-    Song getSong(String songID) {
+    Track getTrackExtra(String id) {
         String token = newApiToken()
-        String trackResponse = post("${wwwUrl()}/ajax/gw-light.php?api_version=1.0&api_token=" + token + "&input=3", "[{\"method\":\"song.getListData\",\"params\":{\"sng_ids\":[" + songID + "]}}]", asList(BROWSER_HEADERS))
-        if (trackResponse == null || trackResponse.equals("[{\"error\":{\"REQUEST_ERROR\":\"Wrong parameters\"},\"results\":{}}]")) {
+        String responseAsText = post("${wwwUrl()}/ajax/gw-light.php?api_version=1.0&api_token=" + token + "&input=3", "[{\"method\":\"song.getListData\",\"params\":{\"sng_ids\":[" + id + "]}}]", asList(BROWSER_HEADERS))
+        if (responseAsText == null || responseAsText.equals("[{\"error\":{\"REQUEST_ERROR\":\"Wrong parameters\"},\"results\":{}}]")) {
             return null
         } else {
-            Response response = new Gson().fromJson(trackResponse, Response.class)
-            Results result = response.getResults()
-            if (result.getCount() == 0) {
+            JSONObject response = JSON.parse(responseAsText) as JSONObject
+            JSONArray results = response.results.tracks
+            if (results.isEmpty()) {
                 return null
             } else {
-                return result.getTracks().get(0).toSong()
+                return new Gson().fromJson(results.first().toString(), Track.class)
             }
         }
     }
 
-    List<Song> getPlaylist(String pl) throws InterruptedException {
-        List<Song> songList = new ArrayList<>()
-        String searchResponse = get(pl, asList(BROWSER_HEADERS))
-        if (searchResponse != null) {
-            SearchResponse response = new Gson().fromJson(searchResponse, SearchResponse.class)
-            Error error = response.getError()
-            if (error != null) {
-                if (error.getCode() == 4) {
-                    sleep(WAIT_TIME)
-                    return getPlaylist(pl)
-                } else {
-                    return songList
-                }
-            }
-
-            List<Data> tracks = response.getTracks().getData()
-
-            if (tracks.isEmpty()) {
-                return songList
-            }
-
-            tracks.each { track ->
-                String id = track.getId()
-                String title = track.getTitle()
-                String album = track.getAlbum().getTitle()
-                ArtistList artists = new ArtistList()
-                artists.add(track.getArtist().getName())
-                long duration = track.getDuration()
-                String altSID = track.getAlternative() == null ? "" : track.getAlternative().getID()
-                Song s = new Song(id, track.getMd5(), title, artists, album, duration, 0L, "", track.getMediaVersion(), track.getAlbumPicture())
-                s.setAlbumArtist(artists.get(0))
-                s.setAlternativeID(altSID)
-
-                String coverXL = track.getAlbum().getCoverXL()
-                if (coverXL != null) {
-                    s.setCoverURL(coverXL)
-                } else {
-                    String coverBig = track.getAlbum().getCoverBig()
-                    if (coverBig != null) {
-                        s.setCoverURL(coverBig)
-                    }
-                }
-                songList.add(s)
-            }
-
-            if ((songList = getExtraInfo(songList)).size() == 400) {
-                songList.addAll(getPlaylistTracks(pl, 400))
-            }
-        }
-
-        return songList
+    List<Track> getPlaylist(String playlistId, int limit = 100) throws InterruptedException {
+        String url = format("%s/playlist/%s?limit=%d", apiUrl(), playlistId, limit)
+        Playlist playlist = diWsService.callApi(Playlist.class, url)
+        List<Track> tracks = playlist.tracklist.tracks
+        return getTrackExtra(tracks)
     }
 
-    List<Song> getArtist(String artistURL) throws InterruptedException {
-        List<Song> songList = new ArrayList<>()
-        String searchResponse = get(artistURL, asList(BROWSER_HEADERS))
-        if (searchResponse != null) {
-            SearchResponse response = new Gson().fromJson(searchResponse, SearchResponse.class)
-            Error error = response.getError()
-            if (error != null) {
-                if (error.getCode() == 4) {
-                    sleep(WAIT_TIME)
-                    return getArtist(artistURL)
-                }
-
-                return songList
-            }
-
-            List<Data> albums = response.getData()
-            if (albums.isEmpty()) {
-                return songList
-            }
-
-            for (Data album : albums) {
-                String link = album.getLink()
-                if (!link.isEmpty()) {
-                    songList.addAll(getAlbumTracks(link.replace("www.", "api.")))
-                }
-            }
-
-            songList = getExtraInfo(songList)
-            String next = response.getNext()
-            if (!next.isEmpty()) {
-                songList.addAll(getArtist(next))
-            }
-        }
-
-        return songList
+    // TODO gérer "next"
+    List<Track> getPlaylistTracks(String playlistId, int index = 0, int limit = 100) throws InterruptedException {
+        String url = format("%s/playlist/%s/tracks?index=%d&limit=%d", apiUrl(), playlistId, index, limit)
+        List<Track> tracks = diWsService.callApiAsList(Track.class, url)
+        return getTrackExtra(tracks)
     }
 
-    List<Song> getPlaylistTracks(String pl, int index) throws InterruptedException {
-        List<Song> songList = new ArrayList<>()
-        String searchResponse = get(pl + "/tracks?index=" + index, asList(BROWSER_HEADERS))
-        if (searchResponse != null) {
-            SearchResponse response = new Gson().fromJson(searchResponse, SearchResponse.class)
-            Error error = response.getError()
-            if (error != null) {
-                if (error.getCode() == 4) {
-                    sleep(WAIT_TIME)
-                    return getPlaylistTracks(pl, index)
-                } else {
-                    return songList
-                }
-            }
-
-            List<Data> tracks = response.getData()
-            if (tracks.isEmpty()) {
-                return songList
-            }
-
-            tracks.each { track ->
-                String id = track.getId()
-                String title = track.getTitle()
-                String album = track.getAlbum().getTitle()
-                ArtistList artists = new ArtistList()
-                artists.add(track.getArtist().getName())
-                long duration = track.getDuration()
-                String altSID = track.getAlternative() == null ? "" : track.getAlternative().getID()
-                Song s = new Song(id, track.getMd5(), title, artists, album, duration, 0L, "", track.getMediaVersion(), track.getAlbumPicture())
-                s.setAlternativeID(altSID)
-                s.setAlbumArtist(artists.get(0))
-                String coverXL = track.getAlbum().getCoverXL()
-                if (coverXL != null) {
-                    s.setCoverURL(coverXL)
-                } else {
-                    String coverBig = track.getAlbum().getCoverBig()
-                    if (coverBig != null) {
-                        s.setCoverURL(coverBig)
-                    }
-                }
-
-                songList.add(s)
-            }
-
-            songList = getExtraInfo(songList)
-            if (response.getNext() != null) {
-                songList.addAll(getPlaylistTracks(pl, index + 25))
-            }
+    List<Track> getArtistTracks(String artistId) throws InterruptedException {
+        String url = format("%s/artist/%s/albums", apiUrl(), artistId)
+        List<Album> albums = diWsService.callApiAsList(Album.class, url)
+        List<Track> tracks = new ArrayList<>()
+        albums.each {
+            tracks.addAll(getAlbumTracks(Long.toString(it.id)))
         }
-
-        return songList
+        return getTrackExtra(tracks)
     }
 
-    List<Song> getExtraInfo(List<Song> songList) {
-        StringBuilder sb = new StringBuilder("[{\"method\":\"song.getListData\",\"params\":{\"sng_ids\":[")
-        sb.append(songList.collect { it.id }.join(","))
-        sb.append("]}}]")
-        String ids = sb.toString()
-
-        String url = "${wwwUrl()}/ajax/gw-light.php?api_version=1.0&api_token=" +
-                newApiToken() + "&input=3&cid=" + randomAlphanumeric(18).toLowerCase()
-        String trackResponse = post(url, ids, asList(BROWSER_HEADERS))
-
-        Response[] response = new Gson().fromJson((String) trackResponse, Response[].class) as Response[]
-        Response r = response[0]
-        def results = r.getResults()
-        List<Data> tracks = results.getData()
-
-        tracks.each { track ->
-            String tmpID = track.getSongID()
-            Song s2 = songList.find { it.id.equals(tmpID) }
-            s2.setArtists(track.getArtistList())
-            s2.setMd5(track.getMd5())
-            s2.setTrackNum(track.getTrackNumber())
-            s2.setYear(track.getYear())
-            s2.setDiskNumber(track.getDiskNumber())
-            s2.setIsrc(track.getIsrc())
-            s2.setComposer(track.getComposer())
-            s2.setBpm(track.getBpm())
-        }
-
-        return songList
-    }
-
-    List<didawn.gson.Track> getTrackExtra(List<didawn.gson.Track> trackList) {
-        if (Environment.current == Environment.PRODUCTION) {
+    List<Track> getTrackExtra(List<Track> trackList) {
+        boolean forceTrackExtra = true
+        if (forceTrackExtra || Environment.current == Environment.PRODUCTION) {
             StringBuilder sb = new StringBuilder("[{\"method\":\"song.getListData\",\"params\":{\"sng_ids\":[")
             sb.append(trackList.collect { it.id }.join(","))
             sb.append("]}}]")
@@ -518,164 +352,56 @@ class DiService {
                     newApiToken() + "&input=3&cid=" + randomAlphanumeric(18).toLowerCase()
             String extraInfoResponse = post(url, ids, asList(BROWSER_HEADERS))
 
-            JSONObject extraInfoJSON = JSON.parse(extraInfoResponse)
+            JSONObject extraInfoJSON = JSON.parse(extraInfoResponse) as JSONObject
 
             JSONArray data = extraInfoJSON.results.data
-            List<TrackExtra> trackExtraList = Arrays.asList(new Gson().fromJson(data.toString(), TrackExtra[].class))
+            List<Track> trackExtraList = asList(new Gson().fromJson(data.toString(), Track[].class)) as List<Track>
 
             trackList.each { t ->
                 long trackId = t.getId()
-                TrackExtra trackExtra = trackExtraList.find { trackId == it.SNG_ID }
-                t.setTrackExtra(trackExtra)
+                Track trackExtra = trackExtraList.find { trackId == it.SNG_ID }
+                log.info t.SNG_ID
+                t << trackExtra
+                log.info t.SNG_ID
             }
         }
         return trackList
     }
 
-    List<Song> getAlbumTracks(String albumUrl) throws InterruptedException {
-        List<Song> songList = new ArrayList<>()
-        String searchResponse = get(albumUrl, asList(BROWSER_HEADERS))
+    // TODO return extra infos
+    List<Track> getAlbumTracks(String albumId) throws InterruptedException {
+        String url = format("%s/album/%s", apiUrl(), albumId)
+        Album album = diWsService.callApi(Album.class, url)
+        album.tracks.tracks
+    }
 
-        try {
-            if (searchResponse != null) {
-                SearchResponse response = new Gson().fromJson(searchResponse, SearchResponse.class)
-                Error error = response.getError()
-                if (error != null) {
-                    if (error.getCode() == 4) {
-                        sleep(WAIT_TIME)
-                        return getAlbumTracks(albumUrl)
-                    } else {
-                        return songList
-                    }
-                }
+    List<Artist> searchArtists(String searchTerm, int limit = 25) throws InterruptedException {
+        String url = format("%s/search/artist?q=%s&limit=%d", apiUrl(), encode(searchTerm, UTF8), limit)
+        return diWsService.callApiAsList(Artist.class, url)
+    }
 
-                String album = response.getTitle()
-                String genre = ""
-                List<Data> data = response.getGenres().getData()
-                if (data != null && !data.isEmpty()) {
-                    genre = data.get(0).getName()
-                }
-                String label = response.getLabel()
-                String trackCount = response.getNbTracks()
+    List<Album> searchAlbums(String searchTerm, int limit = 25) throws InterruptedException {
+        String url = format("%s/search/album?q=%s&limit=%d", apiUrl(), encode(searchTerm, UTF8), limit)
+        return diWsService.callApiAsList(Album.class, url)
+    }
 
-                String albumArtist = response.getArtist().getName()
+    List<Track> searchTracks(String query, int limit = 25) {
+        String url = format("%s/search/track?q=%s&limit=%d", apiUrl(), encode(query, UTF8), limit)
+        List<Track> tracks = diWsService.callApiAsList(Track.class, url)
+        return getTrackExtra(tracks);
+    }
 
-                List<Data> tracks = response.getTracks().getData()
-                if (tracks.isEmpty()) {
-                    return songList
-                }
-
-                tracks.each { track ->
-                    String id = track.getId()
-                    String title = track.getTitle()
-                    ArtistList artists = new ArtistList()
-                    artists.add(track.getArtist().getName())
-                    long duration = track.getDuration()
-                    Alternative alternative = track.getAlternative()
-
-                    Song s = new Song(id, track.getMd5(), title, artists, album, duration, 0L, "", track.getMediaVersion(), track.getAlbumPicture())
-
-                    if (alternative != null) {
-                        s.setAlternativeID(alternative.getID())
-                    }
-
-                    s.setGenre(genre)
-                    s.setLabel(label)
-                    s.setAlbumTrackCount(trackCount)
-                    s.setAlbumArtist(albumArtist)
-                    String coverXL = response.getCoverXL()
-                    String coverBig = response.getCoverBig()
-                    if (coverXL != null) {
-                        s.setCoverURL(coverXL)
-                    } else if (coverBig != null) {
-                        s.setCoverURL(coverBig)
-                    }
-
-                    songList.add(s)
-                }
-            }
-        } catch (NullPointerException e) {
-            log.warn e
+    List<Track> searchAlbumTracks(String searchTerm) throws InterruptedException {
+        List<Track> tracks = new ArrayList<>()
+        List<Album> albums = searchAlbums(searchTerm)
+        albums.each {
+            tracks.addAll(getAlbumTracks(Long.toString(it.id)))
         }
-
-        return getExtraInfo(songList)
+        return tracks ?: Collections.emptyList()
     }
 
-    boolean downloadHelper(Song song, OutputStream out) {
-        if (download(song, out)) {
-            return true
-        } else {
-            return (song.getAlternativeID() != null || !song.getAlternativeID().equals(song.getId())) && (song = getSong(song.getAlternativeID())) != null ? download(song, out) : false
-        }
-    }
-
-    List<didawn.gson.Track> searchTracks(String query, int limit = 10) throws InterruptedException {
-        List<didawn.gson.Track> tracks = null
-
-        try {
-            String url = "${apiUrl()}/search/track?q=${encode(query, UTF8)}&limit=${limit}"
-            String searchResponse = get(url, asList(BROWSER_HEADERS))
-            if (searchResponse != null) {
-                JSONObject trackResponse = JSON.parse(searchResponse)
-                def error = trackResponse.error
-                if (error != null) {
-                    if (error.code == 4) {
-                        sleep(WAIT_TIME)
-                        return searchTracks(query, limit)
-                    }
-                } else {
-                    JSONArray data = trackResponse.data
-                    tracks = Arrays.asList(new Gson().fromJson(data.toString(), didawn.gson.Track[].class))
-                }
-            }
-        } catch (UnsupportedEncodingException e) {
-            log.warn e
-        }
-
-        return tracks == null ? Collections.emptyList() : getTrackExtra(tracks)
-    }
-
-    List<didawn.gson.Album> searchAlbums(String searchTerm, int limit = 10) throws InterruptedException {
-        List<didawn.gson.Album> albumsJson = null
-        try {
-            String url = "${apiUrl()}/search/album?q=${URLEncoder.encode(searchTerm, UTF8)}&limit=${limit}"
-            String searchResponse = get(url, asList(BROWSER_HEADERS))
-            if (searchResponse != null) {
-                JSONObject jsonResponse = JSON.parse(searchResponse)
-                def error = jsonResponse.error
-                if (error != null) {
-                    if (error.code == 4) {
-                        sleep(WAIT_TIME)
-                        return searchAlbums(searchTerm, limit)
-                    }
-                }
-
-                JSONArray data = jsonResponse.data
-                albumsJson = Arrays.asList(new Gson().fromJson(data.toString(), didawn.gson.Album[].class))
-            }
-        } catch (UnsupportedEncodingException e) {
-            log.warn "UTF-8 not supported", e
-        }
-        return albumsJson
-    }
-
-    List<Song> searchAlbumTracks(String searchTerm) throws InterruptedException {
-        List<Song> songList = new ArrayList<>()
-        List<didawn.models.Album> albums = searchAlbums(searchTerm)
-        for (didawn.models.Album album : albums) {
-            List<Song> tracks = findTracksByAlbumId(album.getId())
-            songList.addAll(tracks)
-        }
-        return songList ?: Collections.emptyList()
-    }
-
-    List<Song> findTracksByAlbumId(String albumId) {
-        String url = "${apiUrl()}/album/" + albumId
-        return getAlbumTracks(url)
-    }
-
-    List<Song> query(String searchTerm) throws InterruptedException {
-        List<Song> trackList = new ArrayList<>()
+    List<Track> query(String searchTerm) throws InterruptedException {
+        List<Track> trackList = new ArrayList<>()
         String re1 = ".*?"
         String re2 = "(www|api)"
         String re3 = "(\\." + dawn() + "\\.com  / ) "
@@ -685,7 +411,7 @@ class DiService {
         Pattern p = Pattern.compile(re1 + re2 + re3 + re5 + re6 + re7, Pattern.CASE_INSENSITIVE | Pattern.DOTALL)
         Matcher m = p.matcher(searchTerm)
         if (m.find()) {
-            trackList = getPlaylist("${apiUrl()}/playlist/" + m.group(5))
+            trackList = getPlaylist(m.group(5))
         } else {
             re5 = "(album)"
             p = Pattern.compile(re1 + re2 + re3 + re5 + re6 + re7, Pattern.CASE_INSENSITIVE | Pattern.DOTALL)
@@ -697,14 +423,14 @@ class DiService {
                 p = Pattern.compile(re1 + re2 + re3 + re5 + re6 + re7, Pattern.CASE_INSENSITIVE | Pattern.DOTALL)
                 m = p.matcher(searchTerm)
                 if (m.find()) {
-                    trackList = getArtist("${apiUrl()}/artist/" + m.group(5) + "/albums")
+                    trackList = getArtistTracks(m.group(5))
                 } else {
                     re5 = "(track)"
                     re7 = "((-?)\\d+)"
                     p = Pattern.compile(re1 + re2 + re3 + re5 + re6 + re7, Pattern.CASE_INSENSITIVE | Pattern.DOTALL)
                     m = p.matcher(searchTerm)
                     if (m.find()) {
-                        Song s = getSong(m.group(5))
+                        Track s = getTrackExtra(m.group(5))
                         if (s != null) {
                             trackList.add(s)
                         }
@@ -715,12 +441,13 @@ class DiService {
             }
         }
 
-        trackList = trackList.unique { it.md5 }.sort { s1, s2 ->
+        trackList = trackList.unique { it.id }.sort { s1, s2 ->
             if (s1.getAlbum().equals(s2.getAlbum())) {
-                return s1.getDiskNumber() == s2.getDiskNumber() ? s1.getTrackNumber().compareTo(s2.getTrackNumber())
-                        : s1.getDiskNumber() - s2.getDiskNumber()
+                return s1.getDISK_NUMBER() == s2.getDISK_NUMBER() ?
+                        s1.getTRACK_NUMBER() - s2.getTRACK_NUMBER() :
+                        s1.getDISK_NUMBER() - s2.getDISK_NUMBER()
             } else {
-                return s1.getAlbum().compareTo(s2.getAlbum())
+                return s1.album.title.compareTo(s2.album.title)
             }
         }
 

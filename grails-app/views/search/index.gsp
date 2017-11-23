@@ -26,17 +26,17 @@
         </div>
     </div>
 
-    <g:each in="${albums.collate(6)}" var="albumLine">
+    <legend class="text-center">ARTISTS</legend>
+
+    <g:each in="${artists.collate(6)}" var="artistLine">
         <div class="row">
-            <g:each in="${albumLine}" var="album">
-                <div class="col-md-2">
-                    <g:link controller="album" action="show" id="${album.id}" class="nohover">
-                        <img src="${album.cover_medium}" class="nopadding width-100">
+            <g:each in="${artistLine}" var="artist">
+                <div class="col-sm-2">
+                    <g:link controller="artist" action="show" id="${artist.id}" class="nohover">
+                        <img src="${artist.pictureMedium}" class="nopadding width-100">
 
                         <p class="text-center text-xsmall padding-top-5 black">
-                            ${album.title}
-                            <br>
-                            (${album.nbTracks} tracks)
+                            ${artist.name}
                         </p>
                     </g:link>
                 </div>
@@ -44,33 +44,74 @@
         </div>
     </g:each>
 
+    <legend class="text-center">ALBUMS</legend>
+
+    <g:each in="${albums.collate(6)}" var="albumLine">
+        <div class="row">
+            <g:each in="${albumLine}" var="album">
+                <div class="col-sm-2">
+                    <g:link controller="album" action="show" id="${album.id}" class="nohover">
+                        <img src="${album.coverMedium}" class="nopadding width-100">
+
+                        <p class="text-center text-xsmall padding-top-5 black">
+                            ${album.title}
+                            <br>
+                            (${album.recordType} - ${album.nbTracks} tracks)
+                        </p>
+                    </g:link>
+                </div>
+            </g:each>
+        </div>
+    </g:each>
+
+    <legend class="text-center">TITRES</legend>
+
     <table class="table">
         <thead>
         <tr>
-            <td></td>
-            <td>Artist</td>
-            <td>Album</td>
-            <td>Title</td>
-            <td>Rank</td>
-            <td>Link</td>
+            <th class="col-xs-1"></th>
+            <th class="col-xs-3">Artist / Album</th>
+            <th class="col-xs-6">Title</th>
+            <th class="col-xs-2">Link</th>
         </tr>
         </thead>
         <tbody>
-        <g:each in="${tracks}" var="track">
+        <g:each in="${tracksMap.keySet()}" var="key">
             <tr>
+                <g:set var="tracks" value="${tracksMap.get(key)}"/>
+                <g:set var="firstTrack" value="${tracks.first()}"/>
                 <td>
-                    <img src="${track.album.cover_small}" class="nopadding width-100">
+                    <img src="${firstTrack.album.coverMedium}" class="nopadding width-100">
                 </td>
-                <td>${track.artist.name}</td>
-                <td>${track.album.title}</td>
-                <td>${track.title}</td>
-                <td>${track.rank}</td>
                 <td>
-                    <g:link action="download" id="${track.id}"
-                            params='[data: track.data, filename: "${track.artist.name} - ${track.title}.mp3"]'
-                            class="btn btn-primary">
-                        Click
-                    </g:link>
+                    ${firstTrack.artist.name}
+                    <br/>
+                    <small class="text-muted">
+                        ${firstTrack.album.title}
+                    </small>
+                    <br/>
+                    <small class="text-muted text-xsmall">
+                        <br/>
+                        ${firstTrack.album.id}
+                    </small>
+                </td>
+                <td>
+                    <g:each in="${tracks}" var="track">
+                        <p>
+                            ${track.title}
+                            <small class="text-muted text-xsmall">(${track.rank})</small>
+                        </p>
+                    </g:each>
+                </td>
+                <td>
+                    <g:each in="${tracks}" var="track">
+                        <g:link action="download" id="${track.id}"
+                                params='[data: track.data, filename: "${track.artist.name} - ${track.title}.mp3"]'
+                                class="btn btn-primary">
+                            Click
+                        </g:link>
+                        <br/>
+                    </g:each>
                 </td>
             </tr>
         </g:each>
