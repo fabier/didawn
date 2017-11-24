@@ -2,7 +2,7 @@ package didawn.gson
 
 import com.google.gson.annotations.SerializedName
 
-class Genre extends BaseJSON {
+class Genre {
 
     @SerializedName("id")
     long id

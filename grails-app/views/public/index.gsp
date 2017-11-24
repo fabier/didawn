@@ -26,21 +26,23 @@
         </div>
     </div>
 
-    <g:each in="${playlists.collate(6)}" var="playlistLine">
-        <div class="row">
-            <g:each in="${playlistLine}">
-                <div class="col-sm-2">
-                    <g:link controller="playlist" action="show" id="${it.id}" params="[userId: it.owner.id]">
-                        <img src="${it.images.first().url}" class="width-100"/>
+    <g:if test="${playlists}">
+        <g:each in="${playlists.collate(6)}" var="playlistLine">
+            <div class="row">
+                <g:each in="${playlistLine}">
+                    <div class="col-sm-2">
+                        <g:link controller="playlist" action="show" id="${it.id}" params="[userId: it.owner.id]">
+                            <img src="${it.images.first().url}" class="width-100"/>
 
-                        <p class="text-center">
-                            ${it.name}
-                        </p>
-                    </g:link>
-                </div>
-            </g:each>
-        </div>
-    </g:each>
+                            <p class="text-center">
+                                ${it.name}
+                            </p>
+                        </g:link>
+                    </div>
+                </g:each>
+            </div>
+        </g:each>
+    </g:if>
 </div>
 </body>
 </html>

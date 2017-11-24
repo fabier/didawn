@@ -1,7 +1,10 @@
 package didawn
 
 import com.google.gson.Gson
-import didawn.gson.*
+import didawn.gson.Album
+import didawn.gson.Artist
+import didawn.gson.Playlist
+import didawn.gson.Track
 import grails.converters.JSON
 import grails.transaction.Transactional
 import grails.util.Environment
@@ -211,7 +214,7 @@ class DiService {
         track.getSNG_ID() < 0
     }
 
-    int getFormat(Track  track) {
+    int getFormat(Track track) {
         if (isUserTrack(track)) {
             return 0;
         } else {
@@ -368,11 +371,17 @@ class DiService {
         return trackList
     }
 
-    // TODO return extra infos
+    List<Track> searchTracksByArtistAndTitle(String artist, String title) {
+        String query = format("artist:\"%s\" track:\"%s\"\"", artist, title)
+        String url = format("%s/search?q=%s", apiUrl(), encode(query, UTF8))
+        List<Track> tracks = diWsService.callApiAsList(Track.class, url)
+        return getTrackExtra(tracks)
+    }
+
     List<Track> getAlbumTracks(String albumId) throws InterruptedException {
         String url = format("%s/album/%s", apiUrl(), albumId)
         Album album = diWsService.callApi(Album.class, url)
-        album.tracks.tracks
+        return getTrackExtra(album.tracks.tracks)
     }
 
     List<Artist> searchArtists(String searchTerm, int limit = 25) throws InterruptedException {
