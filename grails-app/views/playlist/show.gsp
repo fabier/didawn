@@ -39,7 +39,6 @@
 
         function downloadAll() {
             var rows = $("tbody input[type=checkbox]:checked");
-            console.log(rows);
             downloadRow(rows, 0);
         }
 
@@ -53,16 +52,13 @@
                          params: [artist:"_ARTIST_", title:"_TITLE_"]))}'
                         .replace("_ARTIST_", artist)
                         .replace("_TITLE_", title);
-                console.log(url);
                 $.ajax(url).done(function (data) {
-                    console.log(data);
                     var id = data.id;
                     var dataParam = data.data;
                     if (id !== undefined && data !== undefined) {
                         var dataUrl = '${createLink([controller: "search", action: "dl", id: "_ID_", params: [data: "_DATA_"]])}'
                                 .replace('_ID_', id)
                                 .replace('_DATA_', dataParam);
-                        console.log(dataUrl);
                         downloadAsync(dataUrl, artist + " - " + title + ".mp3", function () {
                             downloadRow(rows, index + 1);
                         });
@@ -75,7 +71,6 @@
 
         function toggleSelectAll() {
             var checked = $("#select-all").prop("checked");
-            console.log(checked)
             $("tbody input[type=checkbox]").prop("checked", checked);
         }
     </script>

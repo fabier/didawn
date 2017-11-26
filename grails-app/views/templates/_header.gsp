@@ -49,7 +49,7 @@
                 </g:if>
                 <g:else>
                     <li>
-                        <g:link uri="${uri}">
+                        <g:link uri="${session.spUri}">
                             Login to Spotify
                         </g:link>
                     </li>

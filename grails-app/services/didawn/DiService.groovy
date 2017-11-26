@@ -29,7 +29,6 @@ import java.util.regex.Pattern
 
 import static java.lang.Long.parseLong
 import static java.lang.String.format
-import static java.net.URLEncoder.encode
 import static java.util.Arrays.asList
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric
 import static org.apache.commons.lang3.StringUtils.substringBetween
@@ -136,7 +135,6 @@ class DiService {
             StatusLine statusLine = httpResponse.getStatusLine()
             int statusCode = statusLine.getStatusCode()
             if (statusCode != 200) {
-                log.info statusCode
                 throw new IllegalStateException("status code: " + statusLine.getStatusCode())
             }
 
@@ -317,27 +315,22 @@ class DiService {
         }
     }
 
-    List<Track> getPlaylist(String playlistId, int limit = 100) throws InterruptedException {
-        String url = format("%s/playlist/%s?limit=%d", apiUrl(), playlistId, limit)
+    List<Track> getPlaylist(String playlistId, int limit = 100) {
+        String url = initBuilder().setPath("playlist/${playlistId}")
+                .addParameter("limit", Integer.toString(limit))
+                .toString()
         Playlist playlist = diWsService.callApi(Playlist, url)
         List<Track> tracks = playlist.tracklist.tracks
         return getTrackExtra(tracks)
     }
 
     // TODO gérer "next"
-    List<Track> getPlaylistTracks(String playlistId, int index = 0, int limit = 100) throws InterruptedException {
-        String url = format("%s/playlist/%s/tracks?index=%d&limit=%d", apiUrl(), playlistId, index, limit)
+    List<Track> getPlaylistTracks(String playlistId, int index = 0, int limit = 100) {
+        String url = initBuilder().setPath("playlist/${playlistId}/tracks")
+                .addParameter("index", Integer.toString(index))
+                .addParameter("limit", Integer.toString(limit))
+                .toString()
         List<Track> tracks = diWsService.callApiAsList(Track, url)
-        return getTrackExtra(tracks)
-    }
-
-    List<Track> getArtistTracks(String artistId) throws InterruptedException {
-        String url = format("%s/artist/%s/albums", apiUrl(), artistId)
-        List<Album> albums = diWsService.callApiAsList(Album, url)
-        List<Track> tracks = new ArrayList<>()
-        albums.each {
-            tracks.addAll(getAlbumTracks(Long.toString(it.id)))
-        }
         return getTrackExtra(tracks)
     }
 
@@ -368,51 +361,95 @@ class DiService {
                 trackList.each { t ->
                     long trackId = t.getId()
                     Track trackExtra = trackExtraList.find { trackId == it.SNG_ID }
-                    log.info t.SNG_ID
                     t << trackExtra
-                    log.info t.SNG_ID
                 }
             }
             return trackList
         }
     }
 
-    List<Track> searchTracksByArtistAndTitle(String artist, String title) {
-        String query = format("artist:\"%s\" track:\"%s\"\"", artist, title)
-        String url = format("%s/search?q=%s", apiUrl(), encode(query, UTF8))
+    private URIBuilder initBuilder() {
+        new URIBuilder(apiUrl())
+    }
+
+    List<Track> searchTracksByArtistAndTitle(String artist, String title, int limit = 1) {
+        String searchTerm = format("artist:\"%s\" track:\"%s\"\"", artist, title)
+        String url = initBuilder().setPath("search")
+                .addParameter("q", searchTerm)
+                .addParameter("limit", Integer.toString(limit))
+                .toString()
         List<Track> tracks = diWsService.callApiAsList(Track, url)
         return getTrackExtra(tracks)
     }
 
-    List<Track> getAlbumTracks(String albumId) throws InterruptedException {
-        String url = format("%s/album/%s", apiUrl(), albumId)
+    List<Track> getAlbumTracks(String albumId) {
+        String url = initBuilder().setPath("album/${albumId}").toString()
         Album album = diWsService.callApi(Album, url)
         return getTrackExtra(album.tracks.tracks)
     }
 
-    List<Artist> searchArtists(String searchTerm, int limit = 25) throws InterruptedException {
-        String url = format("%s/search/artist?q=%s&limit=%d", apiUrl(), encode(searchTerm, UTF8), limit)
+    List<Artist> searchArtists(String searchTerm, int limit = 25) {
+        String url = initBuilder().setPath("search/artist")
+                .addParameter("q", searchTerm)
+                .addParameter("limit", Integer.toString(limit))
+                .toString()
         return diWsService.callApiAsList(Artist, url)
     }
 
-    List<Album> searchAlbums(String searchTerm, int limit = 25) throws InterruptedException {
-        String url = format("%s/search/album?q=%s&limit=%d", apiUrl(), encode(searchTerm, UTF8), limit)
+    List<Album> searchAlbums(String searchTerm, int limit = 25) {
+        String url = initBuilder().setPath("search/album")
+                .addParameter("q", searchTerm)
+                .addParameter("limit", Integer.toString(limit))
+                .toString()
         return diWsService.callApiAsList(Album, url)
     }
 
-    List<Track> searchTracks(String query, int limit = 25) {
-        String url = format("%s/search/track?q=%s&limit=%d", apiUrl(), encode(query, UTF8), limit)
+    List<Track> searchTracks(String searchTerm, int limit = 25) {
+        String url = initBuilder().setPath("search/track")
+                .addParameter("q", searchTerm)
+                .addParameter("limit", Integer.toString(limit))
+                .toString()
         List<Track> tracks = diWsService.callApiAsList(Track, url)
         return getTrackExtra(tracks);
     }
 
     Track getTrackById(String id) {
-        String url = format("%s/track/%s", apiUrl(), id)
+        String url = initBuilder().setPath("track/${id}").toString()
         Track track = diWsService.callApi(Track, url)
         return getTrackExtra(track);
     }
 
-    List<Track> searchAlbumTracks(String searchTerm) throws InterruptedException {
+    Artist getArtistById(String id) {
+        String url = initBuilder().setPath("artist/${id}").toString()
+        return diWsService.callApi(Artist, url)
+    }
+
+    List<Album> getAlbumsByArtistId(String artistId, int limit = 10) {
+        String url = initBuilder().setPath("artist/${artistId}/albums")
+                .addParameter("limit", Integer.toString(limit))
+                .toString()
+        return diWsService.callApiAsList(Album, url)
+    }
+
+    List<Track> getTracksByArtistId(String artistId) {
+        List<Album> albums = getAlbumsByArtistId(artistId)
+        List<Track> tracks = albums.collect {
+            getTracksByAlbumId(it.id)
+        }
+        return getTrackExtra(tracks)
+    }
+
+    List<Track> getTracksByAlbumId(long albumId) {
+        return getTracksByAlbumId(Long.toString(albumId))
+    }
+
+    List<Track> getTracksByAlbumId(String albumId) {
+        String url = initBuilder().setPath("album/${albumId}").toString()
+        Album album = diWsService.callApi(Album, url)
+        return getTrackExtra(album.tracks.tracks)
+    }
+
+    List<Track> searchAlbumTracks(String searchTerm) {
         List<Track> tracks = new ArrayList<>()
         List<Album> albums = searchAlbums(searchTerm)
         albums.each {
@@ -421,7 +458,7 @@ class DiService {
         return tracks ?: Collections.emptyList()
     }
 
-    List<Track> query(String searchTerm) throws InterruptedException {
+    List<Track> query(String searchTerm) {
         List<Track> trackList = new ArrayList<>()
         String re1 = ".*?"
         String re2 = "(www|api)"
@@ -444,7 +481,7 @@ class DiService {
                 p = Pattern.compile(re1 + re2 + re3 + re5 + re6 + re7, Pattern.CASE_INSENSITIVE | Pattern.DOTALL)
                 m = p.matcher(searchTerm)
                 if (m.find()) {
-                    trackList = getArtistTracks(m.group(5))
+                    trackList = getTracksByArtistId(m.group(5))
                 } else {
                     re5 = "(track)"
                     re7 = "((-?)\\d+)"

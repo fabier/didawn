@@ -10,6 +10,9 @@ class Album {
     @SerializedName("title")
     String title
 
+    @SerializedName("upc")
+    String upc
+
     @SerializedName("link")
     String link
 

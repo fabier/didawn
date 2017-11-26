@@ -17,12 +17,12 @@ class Mp3Service {
         MP3File f = (MP3File) AudioFileIO.read(file)
         ID3v24Tag tag = new ID3v24Tag()
 
-        track.artists?.each {
-            tag.addField(FieldKey.ARTIST, it.getART_NAME())
-        }
-
         if (track.getART_NAME()) {
+            tag.addField(FieldKey.ARTIST, track.getART_NAME())
             tag.addField(FieldKey.ALBUM_ARTIST, track.getART_NAME())
+        } else if (track.artists?.first()) {
+            tag.addField(FieldKey.ARTIST, track.artists?.first()?.name)
+            tag.addField(FieldKey.ALBUM_ARTIST, track.artists?.first()?.name)
         }
         if (track.getTitle()) {
             tag.addField(FieldKey.TITLE, track.getTitle())

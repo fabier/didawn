@@ -11,11 +11,7 @@ class PublicController {
     SpService spService
 
     def index() {
-        URI spURI = spService.buildAuthorizeUri()
-        log.info spURI.toString()
-
         List<Playlist> playlists = null
-
         def accessToken = session.accessToken
         if (accessToken) {
             playlists = spService.getPlaylists(accessToken)
@@ -23,14 +19,12 @@ class PublicController {
                 a.name.compareTo(b.name)
             }
         }
-
-        render view: "index", model: [uri: spURI.toString(), playlists: playlists]
+        render view: "index", model: [playlists: playlists]
     }
 
     def logout() {
         session.removeAttribute("accessToken")
         session.removeAttribute("me")
-
         redirect action: "index"
     }
 }

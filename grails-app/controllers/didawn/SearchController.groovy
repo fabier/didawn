@@ -50,7 +50,6 @@ class SearchController {
     }
 
     def dl(String id) {
-        response.setHeader "Content-disposition", "attachment; filename=${params.filename}"
         response.contentType = 'application/octet-stream'
         File tempFile = File.createTempFile("data-", ".mp3")
         tempFile.withOutputStream {

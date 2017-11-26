@@ -14,6 +14,7 @@ import org.apache.http.client.methods.HttpPost
 import org.apache.http.client.utils.URIBuilder
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.message.BasicNameValuePair
+import org.codehaus.groovy.grails.web.mapping.LinkGenerator
 
 import javax.servlet.http.HttpServletRequest
 
@@ -21,6 +22,8 @@ import javax.servlet.http.HttpServletRequest
 class SpService {
 
     def grailsApplication
+
+    LinkGenerator grailsLinkGenerator
 
     public static final String ALWAYS_ASK_TO_LOGIN = false
 
@@ -32,7 +35,7 @@ class SpService {
         if (ALWAYS_ASK_TO_LOGIN) {
             builder.addParameter("show_dialog", "true")
         }
-        builder.addParameter("redirect_uri", sp().redirectUri)
+        builder.addParameter("redirect_uri", grailsLinkGenerator.link(uri: "/callback", absolute: true))
         builder.build()
     }
 
@@ -49,7 +52,7 @@ class SpService {
         List<NameValuePair> urlParameters = new ArrayList<>()
         urlParameters.add(new BasicNameValuePair("grant_type", "authorization_code"))
         urlParameters.add(new BasicNameValuePair("code", code))
-        urlParameters.add(new BasicNameValuePair("redirect_uri", sp().redirectUri))
+        urlParameters.add(new BasicNameValuePair("redirect_uri", grailsLinkGenerator.link(uri: "/callback", absolute: true)))
 
         post.setEntity(new UrlEncodedFormEntity(urlParameters))
 
