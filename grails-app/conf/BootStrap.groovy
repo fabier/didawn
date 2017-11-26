@@ -43,13 +43,10 @@ class BootStrap {
     def destroy = {
     }
 
-    static def generatePassword() {
-    }
-
     def initLeftShiftOperator() {
         Object.metaClass.leftShift {
             it.properties.findAll { it.value && !"class".equals(it.key) }.each {
-                setProperty((String) it.key, it.value)
+                delegate.setProperty((String) it.key, it.value)
             }
         }
     }

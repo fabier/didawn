@@ -9,6 +9,7 @@ import org.springframework.security.access.annotation.Secured
 class SearchController {
 
     DiService diService
+    Mp3Service mp3Service
 
     def search() {
         String searchTerm = params.value
@@ -43,8 +44,24 @@ class SearchController {
         def byteArrayOutputStream = new ByteArrayOutputStream()
         diService.downloadFromData(id, params.data, byteArrayOutputStream)
         response.setHeader "Content-disposition", "attachment; filename=${params.filename}"
-        response.contentType = 'audio/mp3'
+        response.contentType = 'application/octet-stream'
         response.outputStream << byteArrayOutputStream.toByteArray()
         response.outputStream.flush()
+    }
+
+    def dl(String id) {
+        response.setHeader "Content-disposition", "attachment; filename=${params.filename}"
+        response.contentType = 'application/octet-stream'
+        File tempFile = File.createTempFile("data-", ".mp3")
+        tempFile.withOutputStream {
+            diService.downloadFromData(id, params.data, it)
+        }
+        Track track = diService.getTrackById(id)
+        mp3Service.addTags(tempFile, track)
+        tempFile.withInputStream {
+            response.outputStream << it
+        }
+        response.outputStream.flush()
+        tempFile.delete()
     }
 }

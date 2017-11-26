@@ -44,7 +44,7 @@ class DiService {
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"
 
     private final Header[] BROWSER_HEADERS = [
-            new BasicHeader("User-Agent", USER_AGENT),
+            new BasicHeader(KEY_USER_AGENT, USER_AGENT),
             new BasicHeader("Content-Language", "en-US"),
             new BasicHeader("Cache-Control", "max-age=0"),
             new BasicHeader("Accept", "*/*"),
@@ -52,8 +52,6 @@ class DiService {
             new BasicHeader("Accept-Language", "de-DE,de;q=0.8,en-US;q=0.6,en;q=0.4"),
             new BasicHeader("Accept-Encoding", "gzip,deflate,sdch")
     ]
-
-    private final WAIT_TIME = 1000
 
     private final String UTF8 = "UTF-8"
 
@@ -314,14 +312,14 @@ class DiService {
             if (results.isEmpty()) {
                 return null
             } else {
-                return new Gson().fromJson(results.first().toString(), Track.class)
+                return new Gson().fromJson(results.first().toString(), Track)
             }
         }
     }
 
     List<Track> getPlaylist(String playlistId, int limit = 100) throws InterruptedException {
         String url = format("%s/playlist/%s?limit=%d", apiUrl(), playlistId, limit)
-        Playlist playlist = diWsService.callApi(Playlist.class, url)
+        Playlist playlist = diWsService.callApi(Playlist, url)
         List<Track> tracks = playlist.tracklist.tracks
         return getTrackExtra(tracks)
     }
@@ -329,13 +327,13 @@ class DiService {
     // TODO gérer "next"
     List<Track> getPlaylistTracks(String playlistId, int index = 0, int limit = 100) throws InterruptedException {
         String url = format("%s/playlist/%s/tracks?index=%d&limit=%d", apiUrl(), playlistId, index, limit)
-        List<Track> tracks = diWsService.callApiAsList(Track.class, url)
+        List<Track> tracks = diWsService.callApiAsList(Track, url)
         return getTrackExtra(tracks)
     }
 
     List<Track> getArtistTracks(String artistId) throws InterruptedException {
         String url = format("%s/artist/%s/albums", apiUrl(), artistId)
-        List<Album> albums = diWsService.callApiAsList(Album.class, url)
+        List<Album> albums = diWsService.callApiAsList(Album, url)
         List<Track> tracks = new ArrayList<>()
         albums.each {
             tracks.addAll(getAlbumTracks(Long.toString(it.id)))
@@ -343,61 +341,75 @@ class DiService {
         return getTrackExtra(tracks)
     }
 
+    Track getTrackExtra(Track track) {
+        return getTrackExtra(asList(track)).first()
+    }
+
     List<Track> getTrackExtra(List<Track> trackList) {
-        boolean forceTrackExtra = true
-        if (forceTrackExtra || Environment.current == Environment.PRODUCTION) {
-            StringBuilder sb = new StringBuilder("[{\"method\":\"song.getListData\",\"params\":{\"sng_ids\":[")
-            sb.append(trackList.collect { it.id }.join(","))
-            sb.append("]}}]")
-            String ids = sb.toString()
+        if (trackList == null || trackList.isEmpty()) {
+            return trackList
+        } else {
+            boolean forceTrackExtra = true
+            if (forceTrackExtra || Environment.current == Environment.PRODUCTION) {
+                StringBuilder sb = new StringBuilder("[{\"method\":\"song.getListData\",\"params\":{\"sng_ids\":[")
+                sb.append(trackList.collect { it.id }.join(","))
+                sb.append("]}}]")
+                String ids = sb.toString()
 
-            String url = "${wwwUrl()}/ajax/gw-light.php?api_version=1.0&api_token=" +
-                    newApiToken() + "&input=3&cid=" + randomAlphanumeric(18).toLowerCase()
-            String extraInfoResponse = post(url, ids, asList(BROWSER_HEADERS))
+                String url = "${wwwUrl()}/ajax/gw-light.php?api_version=1.0&api_token=" +
+                        newApiToken() + "&input=3&cid=" + randomAlphanumeric(18).toLowerCase()
+                String extraInfoResponse = post(url, ids, asList(BROWSER_HEADERS))
 
-            JSONObject extraInfoJSON = JSON.parse(extraInfoResponse) as JSONObject
+                JSONObject extraInfoJSON = JSON.parse(extraInfoResponse) as JSONObject
 
-            JSONArray data = extraInfoJSON.results.data
-            List<Track> trackExtraList = asList(new Gson().fromJson(data.toString(), Track[].class)) as List<Track>
+                JSONArray data = extraInfoJSON.results.data
+                List<Track> trackExtraList = asList(new Gson().fromJson(data.toString(), Track[])) as List<Track>
 
-            trackList.each { t ->
-                long trackId = t.getId()
-                Track trackExtra = trackExtraList.find { trackId == it.SNG_ID }
-                log.info t.SNG_ID
-                t << trackExtra
-                log.info t.SNG_ID
+                trackList.each { t ->
+                    long trackId = t.getId()
+                    Track trackExtra = trackExtraList.find { trackId == it.SNG_ID }
+                    log.info t.SNG_ID
+                    t << trackExtra
+                    log.info t.SNG_ID
+                }
             }
+            return trackList
         }
-        return trackList
     }
 
     List<Track> searchTracksByArtistAndTitle(String artist, String title) {
         String query = format("artist:\"%s\" track:\"%s\"\"", artist, title)
         String url = format("%s/search?q=%s", apiUrl(), encode(query, UTF8))
-        List<Track> tracks = diWsService.callApiAsList(Track.class, url)
+        List<Track> tracks = diWsService.callApiAsList(Track, url)
         return getTrackExtra(tracks)
     }
 
     List<Track> getAlbumTracks(String albumId) throws InterruptedException {
         String url = format("%s/album/%s", apiUrl(), albumId)
-        Album album = diWsService.callApi(Album.class, url)
+        Album album = diWsService.callApi(Album, url)
         return getTrackExtra(album.tracks.tracks)
     }
 
     List<Artist> searchArtists(String searchTerm, int limit = 25) throws InterruptedException {
         String url = format("%s/search/artist?q=%s&limit=%d", apiUrl(), encode(searchTerm, UTF8), limit)
-        return diWsService.callApiAsList(Artist.class, url)
+        return diWsService.callApiAsList(Artist, url)
     }
 
     List<Album> searchAlbums(String searchTerm, int limit = 25) throws InterruptedException {
         String url = format("%s/search/album?q=%s&limit=%d", apiUrl(), encode(searchTerm, UTF8), limit)
-        return diWsService.callApiAsList(Album.class, url)
+        return diWsService.callApiAsList(Album, url)
     }
 
     List<Track> searchTracks(String query, int limit = 25) {
         String url = format("%s/search/track?q=%s&limit=%d", apiUrl(), encode(query, UTF8), limit)
-        List<Track> tracks = diWsService.callApiAsList(Track.class, url)
+        List<Track> tracks = diWsService.callApiAsList(Track, url)
         return getTrackExtra(tracks);
+    }
+
+    Track getTrackById(String id) {
+        String url = format("%s/track/%s", apiUrl(), id)
+        Track track = diWsService.callApi(Track, url)
+        return getTrackExtra(track);
     }
 
     List<Track> searchAlbumTracks(String searchTerm) throws InterruptedException {

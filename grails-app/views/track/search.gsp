@@ -39,17 +39,15 @@
                         </g:link>
                     </td>
                     <td class="col-sm-1">
-                        <g:link controller="search" action="download" id="${track.id}"
-                                params='[data: track.data, filename: "${track.artist.name} - ${track.title}.mp3"]'
-                                class="btn btn-primary">
-                            <i class="glyphicon glyphicon-download"></i>
-                            Download
-                        </g:link>
+                        <i class="glyphicon glyphicon-download"
+                           onclick="downloadAsync(
+                                   '${createLink([controller: "search", action: "dl", id: track.id, params: [data: track.data]])}',
+                                   'musicalData/${track.artist.name} - ${track.title}.mp3'
+                           )"></i>
+                    </td>
+                    <td class="col-sm-1">
                         <g:if test="${track.preview != null && !"null".equals(track.preview)}">
-                            <div class="btn btn-default"
-                                 onclick="playPause('${track.id}');">
-                                <i class="glyphicon glyphicon-play"></i>
-                            </div>
+                            <i class="glyphicon glyphicon-play nohover" onclick="playPause('${track.id}');"></i>
                             <audio id="audio-${track.id}" class="player">
                                 <source src="${track.preview}" type="audio/mpeg">
                                 Your browser does not support the audio element.
